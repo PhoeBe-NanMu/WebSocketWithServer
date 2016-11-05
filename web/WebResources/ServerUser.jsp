@@ -41,12 +41,12 @@
 
         <div class="col-sm-4" style="margin-bottom:15px;float:left;background-color: #204d74;height:100%">
             <div class="col-sm-11"style="display:block">
-                <li class="list-group-item" style="background:black;color:white;">联系人列表</li>
+                <li class="list-group-item" style="background:black;color:white;">客户列表</li>
                 <ul id="clientuserlist" class="list-group" style="display:block">
-                    <li class="list-group-item">张三</li>
-                    <li class="list-group-item">里斯</li>
-                    <li class="list-group-item" >王五</li>
-                    <li class="list-group-item">小六</li>
+                    <%--<li class="list-group-item">张三</li>--%>
+                    <%--<li class="list-group-item">里斯</li>--%>
+                    <%--<li class="list-group-item" >王五</li>--%>
+                    <%--<li class="list-group-item">小六</li>--%>
                 </ul>
             </div>
         </div>
@@ -73,6 +73,15 @@
             </div>
         </div>
 
+    </div>
+
+
+
+    <div id="infomation" style="height:40px">
+        <div style="float: left">
+            <img src="web/WebResources/images.jpg">
+        </div>
+        <div style="float: left"></div>
     </div>
 
 
@@ -113,6 +122,7 @@
     var isClient = "false";
     var isGetMsg = 1;
 
+    var messageInfo = null;
 
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {
@@ -132,9 +142,6 @@
     websocket.onopen = function () {
         isGetMsg = 1;
         setMessageInnerHTML("您好！有什么可以帮助您的吗？");
-
-
-
 //        isNew = "true";
 //        websocket.send(isNew + "|" + isClient + "|" + fromName);
     }
@@ -142,7 +149,30 @@
     //接收到消息的回调方法
     websocket.onmessage = function (event) {
         isGetMsg = 1;
-        setMessageInnerHTML(event.data);
+
+        parseMsg(event.data);
+
+        if (messageInfo != null){
+            setMessageInnerHTML(messageInfo);
+        }
+    }
+
+    //对收到消息解析
+    function parseMsg(data) {
+        var str = data.toString();
+            var mIsStartWithMsgInfo = str.indexOf("msgInfo");
+            var mIsStartWithUserInfo = str.indexOf("userInfo");
+            if (mIsStartWithMsgInfo == 0){
+                messageInfo = str.substring(8,str.length);
+            } else if (mIsStartWithUserInfo ==0){
+                var users = str.split("|");
+
+                var userClientOrServer = users[1];
+                var user = users[2];
+                if (userClientOrServer == "客户"){
+                    document.getElementById('clientuserlist').innerHTML +='<li class="list-group-item">'+user+'</li>';
+                }
+            }
     }
 
     //连接关闭的回调方法
@@ -155,6 +185,8 @@
     window.onbeforeunload = function () {
         closeWebSocket();
     }
+
+
 
     //将消息显示在网页上
     function setMessageInnerHTML(innerHTML) {
@@ -179,7 +211,7 @@
 
     //发送消息
     function send() {
-        if (fromName == "NULL" || toName == "NULL"){
+        if (fromName == "NULL"||toName == "NULL"){
             alert("您还没有选择会话对象，请返回选择")
         } else{
             var message = document.getElementById('text').value;
@@ -209,7 +241,6 @@
         $("#serveruserlist li").click(function () {
             fromName = $(this).text();
             document.getElementById("selectServer").innerHTML="当前客服："+fromName;
-            document.getElementById('clientuserlist').innerHTML +='<li class="list-group-item">小明</li>';
             isNew = "true";
             websocket.send(isNew + "|" + isClient + "|" + fromName);
             alert("客服名字："+fromName);

@@ -19,17 +19,7 @@
                     <li><a href="#wrap">聊天室</a></li>
                     <li><a href="#history">历史记录</a></li>
                     <li><a href="#information">客户信息</a></li>
-                    <li class="dropdown">
-                        <a id="selectServer" href="#" class="dropdown-toggle" data-toggle="dropdown">点击这里选择客服
-                            <b class="caret"></b>
-                        </a>
-
-                        <ul id="serveruserlist" class="dropdown-menu">
-                            <li><a href="#">张三</a></li>
-                            <li><a href="#">小六</a></li>
-                            <li><a href="#">里斯</a></li>
-                        </ul>
-                    </li>
+                    <li><a id="selectServer">尚未选择客服</a></li>
                     <li><a id="exit" href="#" style="color: #c7254e;font-weight: bold">退出</a></li>
 
                 </ul>
@@ -41,12 +31,12 @@
 
         <div class="col-sm-4" style="margin-bottom:15px;float:left;background-color: #204d74;height:100%">
             <div class="col-sm-11"style="display:block">
-                <li class="list-group-item" style="background:black;color:white;">联系人列表</li>
+                <li class="list-group-item" style="background:black;color:white;">客服列表</li>
                 <ul id="clientuserlist" class="list-group" style="display:block">
-                    <li class="list-group-item">张三</li>
-                    <li class="list-group-item">里斯</li>
-                    <li class="list-group-item" >王五</li>
-                    <li class="list-group-item">小六</li>
+                    <%--<li class="list-group-item">张三</li>--%>
+                    <%--<li class="list-group-item">里斯</li>--%>
+                    <%--<li class="list-group-item" >王五</li>--%>
+                    <%--<li class="list-group-item">小六</li>--%>
                 </ul>
             </div>
         </div>
@@ -73,6 +63,15 @@
             </div>
         </div>
 
+    </div>
+
+
+
+    <div id="infomation" style="height:40px">
+        <div style="float: left">
+            <img src="web/WebResources/images.jpg">
+        </div>
+        <div style="float: left"></div>
     </div>
 
 
@@ -110,9 +109,10 @@
 
     var fromName = "NULL";
     var toName = "NULL";
-    var isClient = "false";
+    var isClient = "true";
     var isGetMsg = 1;
 
+    var messageInfo = null;
 
     //判断当前浏览器是否支持WebSocket
     if ('WebSocket' in window) {
@@ -132,9 +132,6 @@
     websocket.onopen = function () {
         isGetMsg = 1;
         setMessageInnerHTML("您好！有什么可以帮助您的吗？");
-
-
-
 //        isNew = "true";
 //        websocket.send(isNew + "|" + isClient + "|" + fromName);
     }
@@ -142,7 +139,31 @@
     //接收到消息的回调方法
     websocket.onmessage = function (event) {
         isGetMsg = 1;
-        setMessageInnerHTML(event.data);
+        parseMsg(event.data);
+        if (messageInfo != null){
+            setMessageInnerHTML(messageInfo);
+        }
+    }
+
+    //对收到消息解析
+    function parseMsg(data) {
+        var str = data.toString();
+
+        var mIsStartWithMsgInfo = str.indexOf("msgInfo");
+        var mIsStartWithUserInfo = str.indexOf("userInfo");
+        if (mIsStartWithMsgInfo == 0){
+            messageInfo = str.substring(8,str.length);
+        } else if (mIsStartWithUserInfo ==0){
+            var users = str.split("|");
+            if (users[1] != "客户"){
+                for (var i = 2; i < users.length; i ++){
+                    var user = users[i];
+                    document.getElementById('clientuserlist').innerHTML +='<li class="list-group-item">'+user+'</li>';
+                }
+            }
+
+
+        }
     }
 
     //连接关闭的回调方法
@@ -155,6 +176,8 @@
     window.onbeforeunload = function () {
         closeWebSocket();
     }
+
+
 
     //将消息显示在网页上
     function setMessageInnerHTML(innerHTML) {
@@ -179,7 +202,7 @@
 
     //发送消息
     function send() {
-        if (fromName == "NULL" || toName == "NULL"){
+        if (toName == "NULL"){
             alert("您还没有选择会话对象，请返回选择")
         } else{
             var message = document.getElementById('text').value;
@@ -206,18 +229,20 @@
 
 <script>
     $(function(){
-        $("#serveruserlist li").click(function () {
-            fromName = $(this).text();
-            document.getElementById("selectServer").innerHTML="当前客服："+fromName;
-            document.getElementById('clientuserlist').innerHTML +='<li class="list-group-item">小明</li>';
-            isNew = "true";
-            websocket.send(isNew + "|" + isClient + "|" + fromName);
-            alert("客服名字："+fromName);
-        });
+//        $("#serveruserlist li").click(function () {
+//            fromName = $(this).text();
+//            document.getElementById("selectServer").innerHTML="当前客服："+fromName;
+//            isNew = "true";
+//            websocket.send(isNew + "|" + isClient + "|" + fromName);
+//            alert("客服名字："+fromName);
+//        });
+
 
         $("#clientuserlist").delegate('li','click',function () {
             toName = $(this).text();
-
+            document.getElementById("selectServer").innerHTML="当前客服："+toName;
+            isNew = "true";
+            websocket.send(isNew + "|" + isClient + "|" + toName);
             alert("客户名字："+toName);
         });
 

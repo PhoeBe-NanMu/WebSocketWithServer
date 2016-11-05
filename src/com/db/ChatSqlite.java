@@ -25,6 +25,7 @@ public class ChatSqlite {
 
     public void executeSQL(String sqlstr){
         try {
+            System.out.println(sqlstr);
             preparedStatement = connection.prepareStatement(sqlstr);
             resultSet = preparedStatement.executeQuery();
 //            displayResult();
@@ -70,4 +71,28 @@ public class ChatSqlite {
     }
 
 
+    public String querySQLForUser(String querySQL) {
+        executeSQL(querySQL);
+        StringBuffer resultStr = new StringBuffer();
+        //不能 resultStr = null
+        System.out.println("151515151515");
+
+        if (resultSet != null){
+            try {
+                while (resultSet.next()) {
+                    System.out.println(resultSet.getString("name"));
+                    resultStr.append("|"+resultSet.getString("name").trim());
+                }
+            } catch (SQLException e) {
+                System.out.print("resultSet Error");
+                e.printStackTrace();
+            }
+            System.out.println(resultStr.toString());
+            return resultStr.toString();
+        } else {
+            System.out.println("Result is NULL");
+            return "";
+        }
+
+    }
 }

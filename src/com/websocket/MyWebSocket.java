@@ -51,10 +51,14 @@ public class MyWebSocket {
 //        userMessage = new UserMessage();
 //        userMessageSet.add(userMessage);
 
+
         addOnlineCount();           //在线数加1
 //        System.out.println("session.getId() : "+session.getId().toString());
         System.out.println("有一个新连接，当前在线人数为：" + getOnlineCount());
+        sendUserInfo();
     }
+
+
 
     /**
      * 连接关闭调用的方法
@@ -72,7 +76,7 @@ public class MyWebSocket {
      * @param session 可选的参数
      */
     @OnMessage
-    public void onMessage(String message, Session session) {
+    public void onMessage(String message, Session session) throws IOException {
         //打印message内容
         System.out.println("message: "+message);
 
@@ -98,7 +102,18 @@ public class MyWebSocket {
             }
 
         } else{
-            addNewUser();
+            if (!userMessage.getClient()){
+                addNewUser();
+            } else{
+                //定向发送消息到客服
+                for(MyWebSocket item: webSocketSet){
+                        if (userMessage.getToName().equals(item.userMessage.getFromName())) {
+                            item.session.getBasicRemote().sendText("userInfo|客户|" + userMessage.getFromName().toString());
+                            System.out.println("testestetsestestsestestsest");
+                        }
+                        continue;
+                }
+            }
         }
 
     }
@@ -145,10 +160,10 @@ public class MyWebSocket {
      */
     private void addNewUser() {
         if (!userMessage.getClient()){
-            clientOrServerClient = "客服";
+            clientOrServerClient = "客服"+this.session.getId().toString();
             addNewServerUser(clientOrServerClient);
         } else{
-            addNewClientUser(clientOrServerClient);
+//            addNewClientUser(clientOrServerClient+this.session.getId().toString());
         }
 
     }
@@ -160,7 +175,7 @@ public class MyWebSocket {
      */
     private void addNewClientUser(String clientOrServerClient) {
         StringBuffer sqlstr = new StringBuffer();
-        sqlstr.append("if not exists(select * from serverUsers where name = '");
+        sqlstr.append("if not exists(select * from clientUsers where name = '");
         sqlstr.append(userMessage.getFromName()+"')\n");
         sqlstr.append("insert into clientUsers values(");
         sqlstr.append("'"+userMessage.getFromName()+"',");
@@ -222,10 +237,38 @@ public class MyWebSocket {
      * @throws IOException
      */
     public void sendMessage(UserMessage userManage) throws IOException{
-        this.session.getBasicRemote().sendText(userManage.getMsg());
+
+        this.session.getBasicRemote().sendText("msgInfo|"+userManage.getMsg());
         //this.session.getAsyncRemote().sendText(message);
     }
 
+    private void sendUserInfo() {
+        try {
+            String userInfo = getUserInfo();
+            this.session.getBasicRemote().sendText("userInfo|客服"+userInfo);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getUserInfo() {
+        chatSqlite.init();
+        System.out.println("1111121212221");
+        String createTableSQL = "IF NOT EXISTS (select * from dbo.sysobjects where xtype='U' and Name = 'serverUsers')\n" +
+                "BEGIN\n" +
+                " create table serverUsers(name char(20),info text); \n" +
+                "END";
+        chatSqlite.createTable(createTableSQL);
+        System.out.println("000000002221");
+
+        String querySQL = "select * from serverUsers";
+        String result = chatSqlite.querySQLForUser(querySQL);
+        System.out.println(result);
+
+        return result;
+
+
+    }
 
     /**
      * 对message进行解析
@@ -245,7 +288,15 @@ public class MyWebSocket {
         if (message.substring(0,stopStates[0]).equals("true")){
             isNew = true;
             userMessage.setClient(message.substring(stopStates[0]+1,stopStates[1]).equals("true"));
-            userMessage.setFromName(message.substring(stopStates[1]+1,message.length()));
+            if (userMessage.getClient()){
+                userMessage.setFromName("客户"+this.session.getId().toString());
+                userMessage.setToName(message.substring(stopStates[1]+1,message.length()));
+                System.out.println("发件人:"+userMessage.getFromName());
+                System.out.println("收件人:"+userMessage.getToName());
+                System.out.println("信息:"+userMessage.getMsg());
+            }else{
+                userMessage.setFromName(message.substring(stopStates[1]+1,message.length()));
+            }
         } else{
             isNew = false;
             userMessage.setToName(message.substring(stopStates[0]+1,stopStates[1]));
